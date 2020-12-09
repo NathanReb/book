@@ -397,7 +397,7 @@ pin-depends: [
   ]
   [
     "mdx.1.7.0"
-    "https://github.com/realworldocaml/mdx/releases/download/1.7.0/mdx-1.7.0.tbz"
+    "git+https://github.com/voodoos/mdx.git#e35838c7459d1546ec42eaa39f9a5ab509802ecd"
   ]
   [
     "menhir.20200612"
