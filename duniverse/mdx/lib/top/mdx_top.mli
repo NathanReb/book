@@ -22,7 +22,21 @@ open Result
 type t
 (** The type for configuration values. *)
 
-val init : verbose:bool -> silent:bool -> verbose_findlib:bool -> unit -> t
+type directive =
+  | Directory of string
+  | Load of string  (** The type for toplevel directives *)
+
+val directories : string list -> directive list
+
+val init :
+  verbose:bool ->
+  silent:bool ->
+  verbose_findlib:bool ->
+  directives:directive list ->
+  packages:string list ->
+  predicates:string list ->
+  unit ->
+  t
 (** [init ()] is a new configuration value. *)
 
 val eval : t -> string list -> (string list, string list) result

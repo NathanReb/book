@@ -1210,12 +1210,8 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
-    "https://github.com/realworldocaml/mdx/releases/download/1.7.0/mdx-1.7.0.tbz"
+    "git+https://github.com/voodoos/mdx.git#e35838c7459d1546ec42eaa39f9a5ab509802ecd"
     "mdx"
-    [
-      "sha256=270e805d32923dadfaa45f09377a0863d691a2e772bb0c99bf7bd0673518ec6e"
-      "sha512=6ea55660ba3a79e4867a0b3ced2cb6bc8f46c0ce4633114365a929fb465070e46699b05daeeefc08bce83742c0e9931e55ad6cf9376d9b76313a28ebb8d05425"
-    ]
   ]
   [
     "https://github.com/rgrinberg/stringext/releases/download/1.6.0/stringext-1.6.0.tbz"

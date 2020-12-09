@@ -1,3 +1,28 @@
+### unreleased
+
+#### Added
+
+- Allow to explicitly set the kind of blocks in labels: `ocaml`, `cram`, `toplevel` or `include`. (#237, @gpetiot)
+- Include blocks do not require an empty block anymore (#286, @gpetiot)
+- Add a new `dune-gen` subcommand that generates testing code for Dune to build
+  and run with the new `mdx` stanza. (#305, @voodoos)
+
+#### Changed
+
+- Improve error message of cram test exceptions due to empty lines in a block (#270, @pitag-ha)
+
+#### Deprecated
+
+#### Removed
+
+#### Fixed
+
+- Report `#require` directive errors (#276, @gpetiot)
+- Handle no such file exception: the input file and the values of options `--root` and `--prelude` are checked (#292, @gpetiot)
+- Keep locations from parsing instead of recomputing the lines, providing better error messages (#241, @gpetiot)
+
+#### Security
+
 ### 1.7.0
 
 #### Added
