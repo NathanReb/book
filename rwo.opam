@@ -10,7 +10,7 @@ license: "ISC"
 homepage: "https://github.com/realworldocaml/book"
 bug-reports: "https://github.com/realworldocaml/book/issues"
 depends: [
-  "dune" {>= "2.4"}
+  "dune" {>= "2.8"}
   "ocaml" {>= "4.10.0" & < "4.11.0"}
   "async"
   "atdgen"
@@ -35,9 +35,10 @@ depends: [
   "textwrap"
   "tls"
   "yojson"
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
