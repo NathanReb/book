@@ -2,7 +2,6 @@
  (files README.md)
  (deps
   (package core)
-  (package mdx)
   (package ppx_jane)
   (package yojson))
  (preludes prelude.ml))

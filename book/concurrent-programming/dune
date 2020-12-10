@@ -4,7 +4,6 @@
   (package async)
   (package cohttp-async)
   (package core)
-  (package mdx)
   (package ppx_jane)
   (package textwrap)
   (package yojson))

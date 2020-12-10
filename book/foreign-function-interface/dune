@@ -4,7 +4,6 @@
   (package core)
   (package ctypes)
   (package ctypes-foreign)
-  (package mdx)
   (package ocaml-print-intf)
   (package ppx_jane))
  (preludes prelude.ml))

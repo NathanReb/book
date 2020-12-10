@@ -2,7 +2,6 @@
  (files README.md)
  (deps
   (package core)
-  (package mdx)
   (package ocamlfind)
   (package ppx_jane))
  (preludes prelude.ml))

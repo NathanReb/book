@@ -5,7 +5,6 @@
   (package base_quickcheck)
   (package core_kernel)
   (package lambdasoup)
-  (package mdx)
   (package patdiff)
   (package ppx_jane)
   (package uri))

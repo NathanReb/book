@@ -4,7 +4,6 @@
   (package async)
   (package core)
   (package core_bench)
-  (package mdx)
   (package ppx_jane))
  (preludes prelude.ml))
 

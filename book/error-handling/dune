@@ -3,6 +3,5 @@
  (deps
   (package base)
   (package core)
-  (package mdx)
   (package ppx_jane))
  (preludes prelude.ml))
