@@ -88,6 +88,19 @@ let get h k =
     else Some (List.hd v)
   with Not_found | Failure _ -> None
 
+  let update h k f =
+    let vorig = get h k in
+    let k = LString.of_string k in
+    match f vorig, vorig with
+    | None, _ -> StringMap.remove k h
+    | Some s, Some s' when s == s' -> h
+    | Some s, _ ->
+      let v' =
+        if is_header_with_list_value k then
+          (String.split_on_char ',' s)
+        else [s]
+      in StringMap.add k v' h
+
 let mem h k = StringMap.mem (LString.of_string k) h
 
 let add_unless_exists h k v =

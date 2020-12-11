@@ -1,7 +1,6 @@
-(lang dune 1.10)
+(lang dune 2.6)
 (name hacl_x25519)
-(version v0.1.1)
-(using fmt 1.1)
+(version v0.2.2)
 (generate_opam_files true)
 (source (github mirage/hacl))
 (documentation https://mirage.github.io/hacl/doc)
@@ -15,17 +14,18 @@
  (depends
   (benchmark :with-test)
   (cstruct (>= 3.5.0))
-  (dune (>= 1.10.0))
   eqaf
   (hex :with-test)
+  (alcotest :with-test)
   ocaml
+  (conf-pkg-config :build)
   (ppx_blob :with-test)
   (ppx_deriving_yojson :with-test)
   (stdlib-shims :with-test)
   (yojson (and :with-test (>= 1.6.0))))
- (depopts mirage-xen-posix ocaml-freestanding)
+ (depopts ocaml-freestanding)
  (conflicts
-  (mirage-xen-posix (< 3.1.0))
+  (mirage-xen (< 6.0.0))
   (ocaml-freestanding (< 0.6.0)))
  (synopsis "Primitives for Elliptic Curve Cryptography taken from Project Everest")
  (description

@@ -4,6 +4,7 @@
 include Cohttp_lwt.S.Server with module IO = Io
 
 val resolve_file : docroot:string -> uri:Uri.t -> string
+(** Deprecated. Please use Cohttp.Path.resolve_local_file. *)
 
 val respond_file :
   ?headers:Cohttp.Header.t ->
@@ -28,7 +29,7 @@ val respond_file :
     Every connection will be served in a new lightweight thread that
    is invoked via the callback defined in [t]. If the callback raises
    an exception, it is passed to [on_exn] (by default, to a function
-   that logs the exceptiom using the {!Logs} library). *)
+   that logs the exception using the {!Logs} library). *)
 val create :
   ?timeout:int ->
   ?backlog:int ->

@@ -36,6 +36,9 @@ depends: [
   "tls"
   "yojson"
 ]
+conflicts: [
+  "ocaml" {!= "4.10.2"}
+]
 build: [
   ["dune" "subst"] {pinned}
   [

@@ -39,6 +39,7 @@ module Unix = struct
                      | `Eof
                      | `Error of exn ] ;
     mutable linger : Cstruct.t option ;
+    recv_buf       : Cstruct.t ;
   }
 
   let safely th =
@@ -56,8 +57,6 @@ module Unix = struct
     (recording_errors Lwt_cs.read, recording_errors Lwt_cs.write_full)
 
   let when_some f = function None -> return_unit | Some x -> f x
-
-  let recv_buf = Cstruct.create 4096
 
   let rec read_react t =
 
@@ -82,10 +81,10 @@ module Unix = struct
     | `Error e  -> fail e
     | `Eof      -> return `Eof
     | `Active _ ->
-        read_t t recv_buf >>= fun n ->
+        read_t t t.recv_buf >>= fun n ->
         match (t.state, n) with
         | (`Active _  , 0) -> t.state <- `Eof ; return `Eof
-        | (`Active tls, n) -> handle tls (Cstruct.sub recv_buf 0 n)
+        | (`Active tls, n) -> handle tls (Cstruct.sub t.recv_buf 0 n)
         | (`Error e, _)    -> fail e
         | (`Eof, _)        -> return `Eof
 
@@ -181,9 +180,10 @@ module Unix = struct
 
   let server_of_fd config fd =
     drain_handshake {
-      state  = `Active (Tls.Engine.server config) ;
-      fd     = fd ;
-      linger = None ;
+      state    = `Active (Tls.Engine.server config) ;
+      fd       = fd ;
+      linger   = None ;
+      recv_buf = Cstruct.create 4096
     }
 
   let client_of_fd config ?host fd =
@@ -192,9 +192,10 @@ module Unix = struct
       | Some host -> Tls.Config.peer config host
     in
     let t = {
-      state  = `Eof ;
-      fd     = fd ;
-      linger = None ;
+      state    = `Eof ;
+      fd       = fd ;
+      linger   = None ;
+      recv_buf = Cstruct.create 4096
     } in
     let (tls, init) = Tls.Engine.client config' in
     let t = { t with state  = `Active tls } in
@@ -259,3 +260,14 @@ let accept certificate =
 and connect authenticator addr =
   let config = Tls.Config.client ~authenticator ()
   in connect_ext config addr
+
+(* Boot the entropy loop at module init time. *)
+let () = Mirage_crypto_rng_lwt.initialize ()
+
+let () =
+  Printexc.register_printer (function
+      | Tls_alert typ ->
+        Some ("TLS alert from peer: " ^ Tls.Packet.alert_type_to_string typ)
+      | Tls_failure f ->
+        Some ("TLS failure: " ^ Tls.Engine.string_of_failure f)
+      | _ -> None)

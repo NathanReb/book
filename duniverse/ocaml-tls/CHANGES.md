@@ -1,3 +1,43 @@
+## v0.12.8 (2020-12-08)
+
+* Re-add ECPointFormats hello extension (both client and server) to avoid
+  handshake failures with Go's TLS stack (RFC 8422 makes it optional, but go
+  (1.15.5) requires it) - reported by @jeffa5 at
+  https://discuss.ocaml.org/t/strange-prohibited-tls-1-2-cipher-suite-9d-issue/
+  fix by @hannesm #424
+
+## v0.12.7 (2020-12-04)
+
+* Tls.lwt: make the receive buffer connection-local to avoid potential data
+  races (#422 by @dinosaure)
+* Tls_mirage: remove unneeded type alias (@hannesm)
+* Add Tls.Config.Ciphers.http2 - a list of ciphersuites allowed to be negotiated
+  for HTTP2 sessions (#423 by @jeffa5)
+
+## v0.12.6 (2020-11-06)
+
+* OCaml 4.12 support (#421 @kit-ty-kate)
+
+## v0.12.5 (2020-09-22)
+
+* Rename length to v_length to be compatible with cstruct 6.0.0 (#419 @dinosaure)
+
+## v0.12.4 (2020-08-08)
+
+* handshake_server13: demote group and cipher log level (#417 by @xguerin)
+* tls_lwt: register printers for Tls_alert and Tls_failure (#418 by @hannesm)
+
+## v0.12.3 (2020-07-04)
+
+* Adapt to new GCM and CCM API of mirage-crypto (#416 by @hannesm)
+* Add support for ChaCha20/Poly1305 ciphersuite (#416 by @hannesm)
+
+## v0.12.2 (2020-06-20)
+
+* tls_lwt again calls Mirage_crypto_rng_lwt.initialize () -- which is since
+  mirage-crypto-rng 0.8 no longer inside the lwt monad, and safe to be called
+  multiple times and on top level (#415 by @hannesm)
+
 ## v0.12.1 (2020-06-12)
 
 in #414 by @hannesm

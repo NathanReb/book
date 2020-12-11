@@ -170,13 +170,22 @@ let encrypt (version : tls_version) (st : crypto_state) ty buf =
                   (CBC { c with iv_mode = Iv iv' }, m) )
 
           | AEAD c ->
-             let explicit_nonce = Crypto.sequence_buf ctx.sequence in
-             let nonce = c.nonce <+> explicit_nonce
-             in
-             let msg =
-               Crypto.encrypt_aead ~cipher:c.cipher ~key:c.cipher_secret ~nonce ~adata:pseudo_hdr buf
-             in
-             (AEAD c, explicit_nonce <+> msg)
+            match c.cipher with
+            | ChaCha20_Poly1305 _ ->
+              (* RFC 7905: no explicit nonce, instead TLS 1.3 construction is adapted *)
+              let nonce = Crypto.aead_nonce c.nonce ctx.sequence in
+              let msg =
+                Crypto.encrypt_aead ~cipher:c.cipher ~key:c.cipher_secret ~nonce ~adata:pseudo_hdr buf
+              in
+              (AEAD c, msg)
+            | _ ->
+              let explicit_nonce = Crypto.sequence_buf ctx.sequence in
+              let nonce = c.nonce <+> explicit_nonce
+              in
+              let msg =
+                Crypto.encrypt_aead ~cipher:c.cipher ~key:c.cipher_secret ~nonce ~adata:pseudo_hdr buf
+              in
+              (AEAD c, explicit_nonce <+> msg)
         in
         (Some { sequence = Int64.succ ctx.sequence ; cipher_st = c_st }, ty, enc)
 
@@ -234,18 +243,31 @@ let decrypt ?(trial = false) (version : tls_version) (st : crypto_state) ty buf 
               (CBC c, msg) )
 
     | AEAD c ->
-       if Cstruct.len buf < 8 then
-         fail (`Fatal `MACUnderflow)
-       else
-         let explicit_nonce, buf = Cstruct.split buf 8 in
-         let adata =
-           let ver = pair_of_tls_version version in
-           Crypto.pseudo_header seq ty ver (Cstruct.len buf - 16)
-         and nonce = c.nonce <+> explicit_nonce
-         in
-         match Crypto.decrypt_aead ~cipher:c.cipher ~key:c.cipher_secret ~nonce ~adata buf with
+      match c.cipher with
+      | ChaCha20_Poly1305 _ ->
+        (* RFC 7905: no explicit nonce, instead TLS 1.3 construction is adapted *)
+        let adata =
+          let ver = pair_of_tls_version version in
+          Crypto.pseudo_header seq ty ver (Cstruct.len buf - Crypto.tag_len c.cipher)
+        and nonce = Crypto.aead_nonce c.nonce seq
+        in
+        (match Crypto.decrypt_aead ~adata ~cipher:c.cipher ~key:c.cipher_secret ~nonce buf with
          | None -> fail (`Fatal `MACMismatch)
-         | Some x -> return (AEAD c, x)
+         | Some x -> return (AEAD c, x))
+      | _ ->
+        let explicit_nonce_len = 8 in
+        if Cstruct.len buf < explicit_nonce_len then
+          fail (`Fatal `MACUnderflow)
+        else
+          let explicit_nonce, buf = Cstruct.split buf explicit_nonce_len in
+          let adata =
+            let ver = pair_of_tls_version version in
+            Crypto.pseudo_header seq ty ver (Cstruct.len buf - Crypto.tag_len c.cipher)
+          and nonce = c.nonce <+> explicit_nonce
+          in
+          match Crypto.decrypt_aead ~cipher:c.cipher ~key:c.cipher_secret ~nonce ~adata buf with
+          | None -> fail (`Fatal `MACMismatch)
+          | Some x -> return (AEAD c, x)
   in
   match st, version with
   | None, _ when ty = Packet.APPLICATION_DATA ->
@@ -547,7 +569,7 @@ let handle_tls state buf =
           Tracing.sexpf ~tag:"ok-alert-out" ~f:Packet.sexp_of_alert_type al ;
           `Alert al
         | `No_err ->
-          Tracing.sexpf ~tag:"state-out" ~f:sexp_of_state state ;
+          (* Tracing.sexpf ~tag:"state-out" ~f:sexp_of_state state ; *)
           `Ok state
       in
       `Ok (res, `Response resp, `Data data)

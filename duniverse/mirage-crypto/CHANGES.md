@@ -1,3 +1,82 @@
+## v0.8.10 (2021-01-21)
+
+- Rsa.priv: require 1 = d * e mod (lam n). This allows interoperability with
+  OpenSSL generated keys. Reported and fixed by @psafont in #100.
+
+## v0.8.9 (2021-01-20)
+
+- Rsa: Adapt computation of d = e ^ -1 mod (lam n), with
+  lam n = lcm (p - 1) (q - 1) (previously lam n = (p - 1) * (q - 1))
+  Fixes #62 reported by @mattjbray, investigated by @psafont,
+  fixed in #99 by @hannesm
+
+## v0.8.8 (2021-01-04)
+
+- new package mirage-crypto-rng-async, entropy feeding using async (#90 @seliopou)
+- Entropy.cpu_rng and Entropy.cpu_rng_bootstrap result in Error `Not_supported
+  on CPUs without RDRAND/RDSEED support (previously an exception was raised
+  in cpu_rng_bootstrap, and cpu_rng resulted in a no-op) (#92 @seliopou)
+- Entropy.cpu_rng delays entropy feeding (returns unit -> unit instead of unit).
+  This fixes a memory leak, reported by @talex5 #94, fixed in #95 by @hannesm
+  The leak was introduced in v0.8.0.
+- Avoid illegal instructions on X86 CPUs without SSSE3 instruction set. Both
+  SHA256 and ChaCha used PSHUFB which is not available on e.g. AMD Phenom II
+  (report #93 by @dinosaure @samoht @pirbo @RichAyotte @sebeec, fixed in #96 by
+  @hannesm)
+
+## v0.8.7 (2020-11-03)
+
+- revise MirageOS cross-compilation (#89, @hannesm)
+
+## v0.8.6 (2020-10-21)
+
+* Detect CPU architecture from C compiler, allowing cross-compiling to Android
+  and iOS (#84 by @EduardoRFC)
+* Upgrade to dune2, use a Makefile for building freestanding libraries, drop
+  mirage-xen-posix support (solo5-based PVH exists now) #86 by @hannesm
+
+## v0.8.5 (2020-08-30)
+
+* Avoid accessing unmapped memory in ChaCha20 (#83 by @hannesm, introduced in
+  0.8.1)
+
+## v0.8.4 (2020-08-22)
+
+* Mirage_crypto_rng: avoid using rdseed if it returned 0 during bootstrap
+  (#82 @hannesm)
+* Avoid misaligned cast in xor (#79 reported by @talex5 on arm32, fixed in #81
+  by @hannesm)
+
+## v0.8.3 (2020-07-27)
+
+* Fix ppc64le cycle_counter (add missing Val_long) (#78 @hannesm)
+  - test_entropy is now test_entropy_collection
+  - test_entropy checks timer and bootstrap functions
+* Avoid polluting symbol table with global non-prefixed symbols
+  (reported by @anmonteiro in #77, fixed #78 @hannesm (suggested by @dinosaure))
+* Avoid "caml_" prefix in entropy_stubs, use "mc_" instead (#78 @hannesm)
+
+## v0.8.2 (2020-07-25)
+
+* Add support for ppc64le. (#76 @avsm)
+
+## v0.8.1 (2020-07-02)
+
+* Add Chacha20 implementation (based on abeaumont/ocaml-chacha), supporting
+  both DJB's original specification (nonce 64 bit, counter 64 bit) and IETF
+  (RFC 8439: nonce 96 bit, counter 32 bit)
+  (#72 @hannesm)
+* Add Poly1305 implementation based on floodyberry/poly1305-donna (#72 @hannesm)
+* Unified AEAD module type, implemented by CCM, GCM, and Chacha20/Poly1305
+  The functions "authenticate_encrypt" and "authenticate_decrypt" are defined,
+  which append (encrypt) and check equality (decrypt, using Eqaf for
+  constant-time comparison) the authentication tag directly.
+  Breaking changes:
+  - GCM "~iv" is now "~nonce"
+  - GCM encrypt returns the encrypted data and authentication tag appended
+  - GCM decrypt returns the plaintext as option (None on authentication failure)
+  (#73 @hannesm)
+
 ## v0.8.0 (2020-06-18)
 
 * New package mirage-crypto-rng-mirage which contains the entropy collection

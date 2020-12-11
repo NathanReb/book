@@ -1,4 +1,5 @@
 open Stdune
+module Re = Dune_re
 
 let commands = Table.create (module String) 10
 
@@ -60,6 +61,80 @@ module Cat = struct
     | _ -> raise (Arg.Bad "Usage: dune_arg cat <file>")
 
   let run (File p) = print_string (Io.read_file p)
+
+  let () = register name of_args run
+end
+
+module Expand_lines = struct
+  let name = "expand_lines"
+
+  let of_args = function
+    | [] -> ()
+    | _ -> raise (Arg.Bad ("Usage: dune_arg " ^ name))
+
+  let run () =
+    let re = Re.compile (Re.str "\\n") in
+    set_binary_mode_in stdin true;
+    set_binary_mode_out stdout true;
+    let rec loop () =
+      match input_line stdin with
+      | exception End_of_file -> ()
+      | s ->
+        print_endline (Re.replace_string ~all:true re s ~by:"\n");
+        loop ()
+    in
+    loop ()
+
+  let () = register name of_args run
+end
+
+module Sanitizer = struct
+  module Configurator = Configurator.V1
+
+  let make_ext_replace config =
+    let tbl =
+      List.filter_map [ "ext_exe"; "ext_dll"; "ext_asm"; "ext_lib"; "ext_obj" ]
+        ~f:(fun var ->
+          match Configurator.ocaml_config_var config var with
+          | Some "" -> None
+          | Some s -> Some (s, "$" ^ var)
+          | None -> (
+            match (var, Configurator.ocaml_config_var config "system") with
+            | "ext_exe", Some "Win32" -> Some (".exe", var)
+            | _ -> None ))
+    in
+    let re =
+      Re.(
+        compile
+          (seq
+             [ diff any (char '/')
+             ; alt (List.map tbl ~f:(fun (s, _) -> str s))
+             ; eow
+             ]))
+    in
+    let map = String.Map.of_list_reduce tbl ~f:(fun _ x -> x) in
+    fun s ->
+      Re.replace re s ~f:(fun g ->
+          let s = Re.Group.get g 0 in
+          sprintf "%c%s" s.[0] (String.Map.find_exn map (String.drop s 1)))
+
+  let name = "sanitize"
+
+  let of_args = function
+    | [] -> ()
+    | _ -> raise (Arg.Bad "Usage: dune_cmd sanitize takes no arguments")
+
+  let run () =
+    let config = Configurator.create "sanitizer" in
+    let sanitize = make_ext_replace config in
+    let rec loop () =
+      match input_line stdin with
+      | exception End_of_file -> ()
+      | line ->
+        print_endline (sanitize line);
+        loop ()
+    in
+    loop ()
 
   let () = register name of_args run
 end

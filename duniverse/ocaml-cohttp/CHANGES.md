@@ -1,3 +1,31 @@
+## v2.5.5 (2021-03-15)
+
+- `Cohttp_async.resolve_local_file`, `Cohttp_lwt.resolve_local_file` and `Cohttp_lwt_unix.resolve_file`
+  are now the same code under the hood (`Cohttp.Path.resolve_local_file`). The old names
+  have been preserved for compatibility, but will be marked as deprecated in the next release. This
+  changes the behavior of `Cohttp_lwt_unix.resolve_file`: it now percent-decodes the paths and blocks
+  escaping from the docroot correctly. This also fixes and tests the corner cases in these methods
+  when the docroot is empty. (@ewanmellor #755)
+
+## v2.5.4 (2020-07-21)
+
+- cohttp: a change in #694 modified the semantics of Header.replace.
+  The semantics change is reverted, and a new Header.update function
+  is introduced, following the semantics of Map.update. (#702 @mseri)
+- cohttp: reimplement update to support compilers that are older than
+  OCaml 4.06 (#703 @mseri)
+
+## v2.5.3 (2020-06-27)
+
+- cohttp-async: adapt to async >= v0.14 (#699 @copy)
+
+## v2.5.2 (2020-06-27)
+
+- cohttp, cohttp-async: correctly set host header for unix domain sockets,
+  implement Unix domain socket support for cohttp-async (#698 @Leonidas-from-XIV)
+- cohttp: better body encoding management when creating request and
+  response, and correction of Header.replace function (#694 @lyrm)
+
 ## v2.5.1 (2020-02-18)
 
 - cohttp-lwt: pass ctx through HEAD client requests (#689 @hannesm)

@@ -24,6 +24,18 @@
  (libraries cohttp alcotest fmt))
 
 (alias
-  (name    runtest)
-  (package cohttp)
-  (action  (run ./test_request.exe)))
+ (name runtest)
+ (package cohttp)
+ (action
+  (run ./test_request.exe)))
+
+(executable
+ (name test_path)
+ (modules test_path)
+ (libraries cohttp alcotest fmt))
+
+(alias
+ (name runtest)
+ (package cohttp)
+ (action
+  (run ./test_path.exe)))

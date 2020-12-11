@@ -1,25 +1,15 @@
-(copy_files# ../src/hacl_x25519_stubs.c)
-
-(copy_files# ../src/Hacl_Curve25519.c)
-
-(copy_files# ../src/Hacl_Curve25519.h)
-
-(copy_files# ../src/FStar.h)
-
-(copy_files# ../src/kremlib_base.h)
-
-(copy_files# ../src/kremlib.h)
-
-(library
- (name hacl_x25519_freestanding)
- (public_name hacl_x25519.freestanding)
- (optional)
- (libraries ocaml-freestanding)
- (c_flags
-  (:include cflags-freestanding.sexp))
- (c_names hacl_x25519_stubs Hacl_Curve25519))
+(copy_files# ../src/*.c)
 
 (rule
- (with-stdout-to
-  cflags-freestanding.sexp
-  (run ./cflags.sh)))
+ (deps Makefile hacl_x25519_stubs.c Hacl_Hash.c Hacl_Curve25519_51.c
+   Hacl_Ed25519.c)
+ (targets libhacl_x25519_freestanding_stubs.a)
+ (action
+  (no-infer
+   (progn
+    (run %{make})))))
+
+(install
+ (package hacl_x25519)
+ (section lib)
+ (files libhacl_x25519_freestanding_stubs.a))

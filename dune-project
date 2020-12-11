@@ -41,5 +41,8 @@ second edition book. See https://realworldocaml.org/")
   sexp_pretty
   textwrap
   tls
-  yojson))
-
+  yojson)
+ (conflicts
+  (ocaml
+   (<> 4.10.2)) ; ocurrent/ocaml-ci#281
+  ))
