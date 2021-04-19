@@ -7,8 +7,9 @@
  (name main)
  (public_name ocaml-mdx)
  (package mdx)
+ (link_flags -linkall :standard)
  (modules :standard \ cli)
- (libraries cli mdx))
+ (libraries cli mdx mdx_test))
 
 (install
  (section bin)
