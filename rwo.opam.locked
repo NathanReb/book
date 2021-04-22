@@ -467,7 +467,7 @@ pin-depends: [
   ]
   [
     "mdx.1.8.1"
-    "git+https://github.com/NathanReb/mdx.git#515e5955d4959f8ea5c3caa74017679ad6b69071"
+    "git+https://github.com/NathanReb/mdx.git#a9c33baf4827be9a5e4948f2f8e1ac93e4fff7b5"
   ]
   [
     "menhir.20210310"
@@ -801,7 +801,7 @@ pin-depends: [
 ]
 x-opam-monorepo-duniverse-dirs: [
   [
-    "git+https://github.com/NathanReb/mdx.git#515e5955d4959f8ea5c3caa74017679ad6b69071"
+    "git+https://github.com/NathanReb/mdx.git#a9c33baf4827be9a5e4948f2f8e1ac93e4fff7b5"
     "mdx"
   ]
   [
