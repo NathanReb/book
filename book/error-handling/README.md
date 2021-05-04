@@ -764,8 +764,8 @@ function calls that were in place at the time of the error:
 $ dune exec -- ./blow_up.exe
 3
 Fatal error: exception Dune__exe__Blow_up.Empty_list
-Raised at file "blow_up.ml", line 6, characters 10-26
-Called from file "blow_up.ml", line 11, characters 16-29
+Raised at Dune__exe__Blow_up.list_max in file "blow_up.ml", line 6, characters 10-26
+Called from Dune__exe__Blow_up in file "blow_up.ml", line 11, characters 16-29
 [2]
 ```
 
