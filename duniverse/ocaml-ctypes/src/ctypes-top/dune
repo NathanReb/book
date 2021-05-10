@@ -3,4 +3,4 @@
 (library
  (name ctypes_top)
  (public_name ctypes.top)
- (libraries ctypes compiler-libs))
+ (libraries ctypes mdx.opttoplevel))
