@@ -87,10 +87,7 @@ let load_file_exn ppf name0 =
       if Filename.check_suffix name ".cmx" || Filename.check_suffix name ".cmxa"
       then
         let cmxs = Filename.temp_file "caml" ".cmxs" in
-        let ias = !X86_proc.internal_assembler in
-        let () = X86_proc.internal_assembler := None in
         Asmlink.link_shared ~ppf_dump:ppf [name] cmxs;
-        let () = X86_proc.internal_assembler := ias in
         cmxs,true
       else
         name,false
