@@ -18,6 +18,8 @@
 open Mdx.Compat
 open Compat_top
 
+type directive = Directory of string | Load of string
+
 let redirect ~f =
   let stdout_backup = Unix.dup Unix.stdout in
   let stderr_backup = Unix.dup Unix.stdout in
@@ -118,14 +120,14 @@ module Phrase = struct
             | Some error ->
                 Location.Error (Lexbuf.shift_location_error startpos error)
           in
-          ( if lexbuf.Lexing.lex_last_action <> Lexbuf.semisemi_action then
-            let rec aux () =
-              match Lexer.token lexbuf with
-              | Parser.SEMISEMI | Parser.EOF -> ()
-              | exception Lexer.Error (_, _) -> ()
-              | _ -> aux ()
-            in
-            aux () );
+          (if lexbuf.Lexing.lex_last_action <> Lexbuf.semisemi_action then
+           let rec aux () =
+             match Lexer.token lexbuf with
+             | Parser.SEMISEMI | Parser.EOF -> ()
+             | exception Lexer.Error (_, _) -> ()
+             | _ -> aux ()
+           in
+           aux ());
           Error exn
     in
     let endpos = lexbuf.Lexing.lex_curr_p in
@@ -151,7 +153,7 @@ module Phrase = struct
     | { parsed = Ok toplevel_phrase; _ } -> (
         match Compat_top.top_directive_name toplevel_phrase with
         | Some dir -> findlib_directive dir
-        | None -> false )
+        | None -> false)
     | _ -> false
 end
 
@@ -208,7 +210,7 @@ module Rewrite = struct
     | { Types.type_manifest = Some ty; _ } -> (
         match Ctype.expand_head env ty with
         | { Types.desc = Types.Tconstr (path, _, _); _ } -> path
-        | _ -> path )
+        | _ -> path)
     | _ -> path
 
   let is_persistent_value env longident =
@@ -238,12 +240,12 @@ module Rewrite = struct
         Typedtree.Tstr_eval ({ Typedtree.exp_type = typ; _ }, _) ) -> (
         match (Ctype.repr typ).Types.desc with
         | Types.Tconstr (path, _, _) -> apply ts env pstr_item path e
-        | _ -> pstr_item )
+        | _ -> pstr_item)
     | _ -> pstr_item
 
   let active_rewriters () =
     List.filter
-      (fun t -> is_persistent_value !Toploop.toplevel_env t.witness)
+      (fun t -> is_persistent_value !Opttoploop.toplevel_env t.witness)
       [ lwt; async ]
 
   let phrase phrase =
@@ -261,19 +263,19 @@ module Rewrite = struct
           let pstr =
             try
               let tstr, env =
-                type_structure !Toploop.toplevel_env pstr Location.none
+                type_structure !Opttoploop.toplevel_env pstr Location.none
               in
               List.map2 (item ts env) pstr tstr.Typedtree.str_items
             with _ -> pstr
           in
           Btype.backtrack snap;
-          Ptop_def pstr )
+          Ptop_def pstr)
     | _ -> phrase
 
   let preload verbose ppf =
     let require pkg =
       let p = Compat_top.top_directive_require pkg in
-      let _ = Toploop.execute_phrase verbose ppf p in
+      let _ = Opttoploop.execute_phrase verbose ppf p in
       ()
     in
     match active_rewriters () with
@@ -324,7 +326,7 @@ let toplevel_exec_phrase t ppf p =
       if !Clflags.dump_parsetree then Printast.top_phrase ppf phrase;
       if !Clflags.dump_source then Pprintast.top_phrase ppf phrase;
       Env.reset_cache_toplevel ();
-      Toploop.execute_phrase t.verbose ppf phrase
+      Opttoploop.execute_phrase t.verbose ppf phrase
 
 type var_and_value = V : 'a ref * 'a -> var_and_value
 
@@ -370,7 +372,7 @@ let errors = ref false
 
 let eval t cmd =
   let buf = Buffer.create 1024 in
-  let ppf = Format.formatter_of_buffer buf in
+  let ppf = Format.formatter_of_out_channel stderr in
   errors := false;
   let exec_code ~capture phrase =
     let lines = ref [] in
@@ -393,14 +395,14 @@ let eval t cmd =
     in
     Oprint.out_phrase := out_phrase;
     let restore () = Oprint.out_phrase := out_phrase' in
-    ( match toplevel_exec_phrase t ppf phrase with
+    (match toplevel_exec_phrase t ppf phrase with
     | ok ->
         errors := (not ok) || !errors;
         restore ()
     | exception exn ->
         errors := true;
         restore ();
-        Location.report_exception ppf exn );
+        Location.report_exception ppf exn);
     Format.pp_print_flush ppf ();
     capture ();
     if
@@ -544,7 +546,7 @@ let monkey_patch (type a) (m : a) (type b) (prj : unit -> b) (v : b) =
         if Obj.field m i == v' then (
           Obj.set_field m i v;
           if Obj.repr (prj ()) == v then raise Exit;
-          Obj.set_field m i v' )
+          Obj.set_field m i v')
       done;
       invalid_arg "monkey_patch: field not found"
     with Exit -> ()
@@ -566,6 +568,9 @@ let protect f arg =
     let _ = f arg in
     ()
   with
+  | Dynlink.Error err ->
+    errors := true;
+    print_string ("Error while loading: " ^ (Dynlink.error_message err))
   | Failure s ->
       errors := true;
       print_string s
@@ -592,21 +597,27 @@ let in_words s =
   in
   split 0 0
 
-let init ~verbose:v ~silent:s ~verbose_findlib ~dirs ~packages ~predicates () =
+let init ~verbose:v ~silent:s ~verbose_findlib ~directives ~packages ~predicates () =
+  Clflags.native_code := true;
   Clflags.real_paths := false;
-  Toploop.set_paths ();
+  Opttoploop.set_paths ();
+  Jit.init_top ();
   Mdx.Compat.init_path ();
-  Toploop.toplevel_env := Compmisc.initial_env ();
+  Opttoploop.toplevel_env := Compmisc.initial_env ();
   Sys.interactive := false;
   patch_env ();
-  List.iter (Topdirs.dir_load Format.err_formatter) dirs;
-  Topfind.don't_load_deeply packages;
-  Topfind.add_predicates predicates;
+  List.iter
+    (function
+      | Directory path -> Opttopdirs.dir_directory path
+      | Load path -> Opttopdirs.dir_load Format.err_formatter path)
+    directives;
+  Opttopfind.don't_load_deeply packages;
+  Opttopfind.add_predicates predicates;
   (* [require] directive is overloaded to toggle the [errors] reference when
      an exception is raised. *)
-  Hashtbl.add Toploop.directive_table "require"
-    (Toploop.Directive_string
-       (fun s -> protect Topfind.load_deeply (in_words s)));
+  Hashtbl.add Opttoploop.directive_table "require"
+    (Opttoploop.Directive_string
+       (fun s -> protect Opttopfind.load_deeply (in_words s)));
   let t = { verbose = v; silent = s; verbose_findlib } in
   show ();
   show_val ();
@@ -622,56 +633,22 @@ let init ~verbose:v ~silent:s ~verbose_findlib ~dirs ~packages ~predicates () =
 
 let envs = Hashtbl.create 8
 
-let rec save_summary acc s =
-  let default_case summary = save_summary acc summary in
-  let add summary id =
-    let acc =
-      if not (is_predef_or_global id) then
-        let name = Translmod.toplevel_name id in
-        name :: acc
-      else acc
-    in
-    save_summary acc summary
-  in
-  match_env s ~value:add
-    ~module_:(fun summary id ~present ->
-      match present with true -> add summary id | false -> acc)
-    ~open_:(fun summary x ->
-      match x with
-      | Pident id -> add summary id
-      | Pdot _ | Papply _ -> default_case summary)
-    ~class_:add ~functor_arg:add ~extension:add
-    ~empty:(fun () -> acc)
-    ~constraints:default_case ~cltype:default_case ~modtype:default_case
-    ~type_:default_case ~copy_types:default_case ~persistent:default_case
-    ~value_unbound:default_case ~module_unbound:default_case
-
 let default_env = ref (Compmisc.initial_env ())
 
 let first_call = ref true
-
-let env_deps env =
-  let names = save_summary [] (Env.summary env) in
-  let objs = List.map Toploop.getvalue names in
-  (env, names, objs)
-
-let load_env env names objs =
-  Toploop.toplevel_env := env;
-  List.iter2 Toploop.setvalue names objs
 
 let in_env e f =
   let env_name = Mdx.Ocaml_env.name e in
   if !first_call then (
     (* We will start from the *correct* initial environment with
        everything loaded, for each environment. *)
-    default_env := !Toploop.toplevel_env;
-    first_call := false );
-  let env, names, objs =
-    try Hashtbl.find envs env_name with Not_found -> env_deps !default_env
+    default_env := !Opttoploop.toplevel_env;
+    first_call := false);
+  let env  =
+    try Hashtbl.find envs env_name with Not_found -> !default_env
   in
-  load_env env names objs;
+  Opttoploop.toplevel_env := env;
   let res = f () in
-  let env = !Toploop.toplevel_env in
-  let env, names, objs = env_deps env in
-  Hashtbl.replace envs env_name (env, names, objs);
+  let env = !Opttoploop.toplevel_env in
+  Hashtbl.replace envs env_name env;
   res

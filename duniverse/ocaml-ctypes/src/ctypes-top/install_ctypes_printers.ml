@@ -37,8 +37,8 @@ let printers = [ "Ctypes_printers.format_typ";
 let eval_string
       ?(print_outcome = false) ?(err_formatter = Format.err_formatter) str =
   let lexbuf = Lexing.from_string str in
-  let phrase = !Toploop.parse_toplevel_phrase lexbuf in
-  Toploop.execute_phrase print_outcome err_formatter phrase
+  let phrase = !Opttoploop.parse_toplevel_phrase lexbuf in
+  Opttoploop.execute_phrase print_outcome err_formatter phrase
 
 let rec install_printers = function
   | [] -> true
