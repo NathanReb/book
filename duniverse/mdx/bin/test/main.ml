@@ -16,11 +16,6 @@
 
 open Mdx
 
-(* The two lines below are required to get the compiler to properly link
-   all of the stubs for Unix and to allow successful dynamic loading of Lwt *)
-external _exit : int -> 'a = "unix_exit"
-let _ = if Sys.opaque_identity false then _exit 0 else ();;
-
 let run_exn (`Setup ()) (`Non_deterministic non_deterministic)
     (`Silent_eval silent_eval) (`Record_backtrace record_backtrace)
     (`Syntax syntax) (`Silent silent) (`Verbose_findlib verbose_findlib)
@@ -37,10 +32,12 @@ let run_exn (`Setup ()) (`Non_deterministic non_deterministic)
   let packages =
     [
       Mdx_test.Package.unix;
+      Mdx_test.Package.findlib_top;
       Mdx_test.Package.findlib_internal;
+      Mdx_test.Package.compilerlibs_toplevel;
     ]
   in
-  let predicates = [ Mdx_test.Predicate.native ] in
+  let predicates = [ Mdx_test.Predicate.byte; Mdx_test.Predicate.toploop ] in
   Mdx_test.run_exn ~non_deterministic ~silent_eval ~record_backtrace ~syntax
     ~silent ~verbose_findlib ~prelude ~prelude_str ~file ~section ~root
     ~force_output ~output ~directives ~packages ~predicates
@@ -77,10 +74,16 @@ let run setup non_deterministic silent_eval record_backtrace syntax silent
 open Cmdliner
 
 let cmd =
+  let exits = Term.default_exits in
+  let man = [] in
   let doc = "Test markdown files." in
   ( Term.(
       pure run $ Cli.setup $ Cli.non_deterministic $ Cli.silent_eval
       $ Cli.record_backtrace $ Cli.syntax $ Cli.silent $ Cli.verbose_findlib
       $ Cli.prelude $ Cli.prelude_str $ Cli.file $ Cli.section $ Cli.root
       $ Cli.force_output $ Cli.output),
-    Term.info "test" ~doc )
+    Term.info "ocaml-mdx-test" ~version:"%%VERSION%%" ~doc ~exits ~man )
+
+let main () = Term.(exit_status @@ eval cmd)
+
+let () = main ()

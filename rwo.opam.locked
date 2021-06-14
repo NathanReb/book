@@ -73,7 +73,7 @@ depends: [
   "macaddr" {= "5.0.1"}
   "magic-mime" {= "1.1.3"}
   "markup" {= "1.0.0-1"}
-  "mdx" {= "1.8.1"}
+  "mdx" {= "1.9.0"}
   "menhir" {= "20210310"}
   "menhirLib" {= "20210310"}
   "menhirSdk" {= "20210310"}
@@ -466,8 +466,8 @@ pin-depends: [
     "https://github.com/aantron/markup.ml/archive/1.0.0.tar.gz"
   ]
   [
-    "mdx.1.8.1"
-    "git+https://github.com/NathanReb/mdx.git#4e05d605138d1297b3bc7c4d1467cfd0c842edd7"
+    "mdx.1.9.0"
+    "git+https://github.com/NathanReb/mdx.git#db92d4c82888a75a0db51ebfcf4a57c4ee59ea3d"
   ]
   [
     "menhir.20210310"
@@ -801,7 +801,7 @@ pin-depends: [
 ]
 x-opam-monorepo-duniverse-dirs: [
   [
-    "git+https://github.com/NathanReb/mdx.git#4e05d605138d1297b3bc7c4d1467cfd0c842edd7"
+    "git+https://github.com/NathanReb/mdx.git#db92d4c82888a75a0db51ebfcf4a57c4ee59ea3d"
     "mdx"
   ]
   [

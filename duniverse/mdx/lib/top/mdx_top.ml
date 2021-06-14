@@ -18,6 +18,8 @@
 open Mdx.Compat
 open Compat_top
 
+type directive = Directory of string | Load of string
+
 let redirect ~f =
   let stdout_backup = Unix.dup Unix.stdout in
   let stderr_backup = Unix.dup Unix.stdout in
@@ -370,7 +372,7 @@ let errors = ref false
 
 let eval t cmd =
   let buf = Buffer.create 1024 in
-  let ppf = Format.formatter_of_buffer buf in
+  let ppf = Format.formatter_of_out_channel stderr in
   errors := false;
   let exec_code ~capture phrase =
     let lines = ref [] in
@@ -595,7 +597,7 @@ let in_words s =
   in
   split 0 0
 
-let init ~verbose:v ~silent:s ~verbose_findlib ~dirs ~packages ~predicates () =
+let init ~verbose:v ~silent:s ~verbose_findlib ~directives ~packages ~predicates () =
   Clflags.native_code := true;
   Clflags.real_paths := false;
   Opttoploop.set_paths ();
@@ -604,7 +606,11 @@ let init ~verbose:v ~silent:s ~verbose_findlib ~dirs ~packages ~predicates () =
   Opttoploop.toplevel_env := Compmisc.initial_env ();
   Sys.interactive := false;
   patch_env ();
-  List.iter (Opttopdirs.dir_load Format.err_formatter) dirs;
+  List.iter
+    (function
+      | Directory path -> Opttopdirs.dir_directory path
+      | Load path -> Opttopdirs.dir_load Format.err_formatter path)
+    directives;
   Opttopfind.don't_load_deeply packages;
   Opttopfind.add_predicates predicates;
   (* [require] directive is overloaded to toggle the [errors] reference when
