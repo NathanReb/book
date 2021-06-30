@@ -121,10 +121,15 @@ let run_cram_tests ?syntax t ?root ppf temp_file pad tests =
     tests;
   Block.pp_footer ?syntax ppf t
 
-let eval_test ?block ?root c cmd =
+let eval_test ?loc ?block ?root c cmd =
   Log.debug (fun l -> l "eval_test %a" Fmt.(Dump.list (Fmt.fmt "%S")) cmd);
   let root = root_dir ?root ?block () in
-  with_dir root (fun () -> Mdx_top.eval c cmd)
+  let block_loc =
+    match block with
+    | Some block -> Some block.Block.loc
+    | None -> loc
+  in
+  with_dir root (fun () -> Mdx_top.eval ?block_loc c cmd)
 
 let err_eval ~cmd lines =
   Fmt.epr "Got an error while evaluating:\n---\n%a\n---\n%a\n%!"
@@ -134,8 +139,8 @@ let err_eval ~cmd lines =
     lines;
   exit 1
 
-let eval_raw ?block ?root c cmd =
-  match eval_test ?block ?root c cmd with
+let eval_raw ?loc ?block ?root c cmd =
+  match eval_test ?loc ?block ?root c cmd with
   | Ok _ -> ()
   | Error e -> err_eval ~cmd e
 
@@ -256,14 +261,18 @@ let with_non_det ~command ~output ~det non_deterministic = function
   | _ -> det ()
 
 let preludes ~prelude ~prelude_str =
-  let aux to_lines p =
+  let aux to_lines to_loc p =
     let env, file = Mdx.Prelude.env_and_file p in
-    (env, to_lines file)
+    (env, to_lines file, to_loc file)
+  in
+  let to_loc prelude_file =
+    let pos = Lexing.{dummy_pos with pos_fname = prelude_file; pos_lnum = 1} in
+    Some Location.{none with loc_start = pos}
   in
   match (prelude, prelude_str) with
   | [], [] -> []
-  | [], fs -> List.map (aux (fun x -> [ x ])) fs
-  | fs, [] -> List.map (aux Mdx.Util.File.read_lines) fs
+  | [], fs -> List.map (aux (fun x -> [ x ]) (fun _ -> None)) fs
+  | fs, [] -> List.map (aux Mdx.Util.File.read_lines to_loc) fs
   | _ -> Fmt.failwith "only one of --prelude or --prelude-str shoud be used"
 
 let run_exn ~non_deterministic ~silent_eval ~record_backtrace ~syntax ~silent
@@ -343,12 +352,12 @@ let run_exn ~non_deterministic ~silent_eval ~record_backtrace ~syntax ~silent
     let buf = Buffer.create (String.length file_contents + 1024) in
     let ppf = Format.formatter_of_buffer buf in
     let envs = Document.envs items in
-    let eval lines () = eval_raw ?root c lines in
-    let eval_in_env lines env = Mdx_top.in_env env (eval lines) in
+    let eval ?loc lines () = eval_raw ?loc ?root c lines in
+    let eval_in_env ?loc lines env = Mdx_top.in_env env (eval ?loc lines) in
     List.iter
       (function
-        | `All, lines -> Ocaml_env.Set.iter (eval_in_env lines) envs
-        | `One env, lines -> eval_in_env lines env)
+        | `All, lines, loc -> Ocaml_env.Set.iter (eval_in_env ?loc lines) envs
+        | `One env, lines, loc -> eval_in_env ?loc lines env)
       preludes;
     List.iter
       (function
