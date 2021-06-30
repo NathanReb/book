@@ -155,6 +155,57 @@ module Phrase = struct
     | _ -> false
 end
 
+module Time = struct
+  let file () = Sys.getenv "MDX_TOP_TIME"
+
+  let cwd = Sys.getcwd ()
+
+  let channel = ref None
+
+  let last_loc = ref None
+
+  let get_channel () =
+    match !channel with
+    | Some oc -> oc
+    | None ->
+      let oc = open_out_gen [Open_creat; Open_append; Open_text] 0o644 (file ()) in
+      channel := Some oc;
+      oc
+
+  let write ~file ~line ~phrase ~preload ~time =
+    let preload = if preload then "preload" else "execute" in
+    let oc = get_channel () in
+    Printf.fprintf oc "%s/%s,%d,%d,%s,%f\n" cwd file line phrase preload time
+
+  let block_loc_str (block_loc : Location.t option) =
+    match block_loc with
+    | None -> "unknown", 0
+    | Some block_loc ->
+        block_loc.loc_start.pos_fname, block_loc.loc_start.pos_lnum
+
+  let get_phrase_number ~file ~line () =
+    let same_block file' line' =
+      String.equal file file' && line = line'
+    in
+    let i =
+      match !last_loc with
+      | Some (file, line, i) when same_block file line -> i + 1
+      | Some _ | None -> 1
+    in
+    last_loc := Some (file, line, i);
+    i
+
+  let time ~block_loc ~preload f =
+    let file, line = block_loc_str block_loc in
+    let phrase = get_phrase_number ~file ~line () in
+    let start = Unix.gettimeofday () in
+    let res = f () in
+    let stop = Unix.gettimeofday () in
+    let time = stop -. start in
+    write ~file ~line ~phrase ~preload ~time;
+    res
+end
+
 open Parsetree
 
 module Rewrite = struct
@@ -270,10 +321,12 @@ module Rewrite = struct
           Ptop_def pstr )
     | _ -> phrase
 
-  let preload verbose ppf =
+  let preload ~block_loc verbose ppf =
     let require pkg =
       let p = Compat_top.top_directive_require pkg in
-      let _ = Toploop.execute_phrase verbose ppf p in
+      let _ =
+        Time.time ~block_loc ~preload:true (fun () -> Toploop.execute_phrase verbose ppf p)
+      in
       ()
     in
     match active_rewriters () with
@@ -302,7 +355,7 @@ type t = {
   verbose_findlib : bool;
 }
 
-let toplevel_exec_phrase t ppf p =
+let toplevel_exec_phrase ~block_loc t ppf p =
   match Phrase.result p with
   | Error exn -> raise exn
   | Ok phrase ->
@@ -319,12 +372,13 @@ let toplevel_exec_phrase t ppf p =
         | Ptop_def s ->
             Ptop_def (Pparse.apply_rewriters_str ~tool_name:"ocaml-mdx" s)
       in
-      Rewrite.preload t.verbose_findlib ppf;
+      Rewrite.preload ~block_loc t.verbose_findlib ppf;
       let phrase = Rewrite.phrase phrase in
       if !Clflags.dump_parsetree then Printast.top_phrase ppf phrase;
       if !Clflags.dump_source then Pprintast.top_phrase ppf phrase;
       Env.reset_cache_toplevel ();
-      Toploop.execute_phrase t.verbose ppf phrase
+      Time.time ~block_loc ~preload:false
+        (fun () -> Toploop.execute_phrase t.verbose ppf phrase)
 
 type var_and_value = V : 'a ref * 'a -> var_and_value
 
@@ -368,7 +422,7 @@ let cut_into_sentences l =
 
 let errors = ref false
 
-let eval t cmd =
+let eval ?block_loc t cmd =
   let buf = Buffer.create 1024 in
   let ppf = Format.formatter_of_buffer buf in
   errors := false;
@@ -393,7 +447,7 @@ let eval t cmd =
     in
     Oprint.out_phrase := out_phrase;
     let restore () = Oprint.out_phrase := out_phrase' in
-    ( match toplevel_exec_phrase t ppf phrase with
+    (match toplevel_exec_phrase ~block_loc t ppf phrase with
     | ok ->
         errors := (not ok) || !errors;
         restore ()
